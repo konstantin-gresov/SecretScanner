@@ -24,6 +24,10 @@ from javalang.tree import (
 )
 from javalang.ast import Node
 from javalang.parser import JavaSyntaxError
+import tempfile
+import subprocess
+import shutil
+
 
 init(autoreset=True)
 
@@ -91,7 +95,8 @@ class Config:
     def _parse_args(self) -> argparse.Namespace:
         """Parse command-line arguments."""
         parser = argparse.ArgumentParser(description="Secret Scanner")
-        parser.add_argument('projectdirectory', type=str, help="Project directory")
+        parser.add_argument('projectdirectory', type=str, nargs='?', default=None,
+                    help="Project directory (optional if --repo is used)")
         parser.add_argument('-r', '--rules', type=str,
                             default=self._get_default('json_settings', 'rules_regex'),
                             help='JSON file with regular expressions')
@@ -109,6 +114,8 @@ class Config:
                             help='Generate HTML report')
         parser.add_argument('--no-cache', action='store_true',
                             help='Disable caching of scan results')
+        parser.add_argument('--repo', type=str,
+                            help='Git repository URL to scan (overrides projectdirectory)')
         return parser.parse_args()
 
     def _get_default(self, section: str, key: str) -> str:
@@ -149,6 +156,10 @@ class Config:
     @property
     def no_cache(self) -> bool:
         return self.args.no_cache
+
+    @property
+    def repo_url(self) -> Optional[str]:
+        return self.args.repo
 
     def get_ast_keywords(self) -> List[str]:
         """
@@ -1006,7 +1017,7 @@ class Scanner:
         self.config = config
         self.ignore_rules = IgnoreRules(config.ignore_file)
         self.rules = RegexRules(config.rules_file)
-        self.file_scanner = FileScanner(config.project_dir, self.ignore_rules)
+        self.file_scanner = None
         analyzers = []
         analyzers.append(RegexCheckerAdapter(self.rules))
         if config.use_entropy:
@@ -1027,7 +1038,7 @@ class Scanner:
         keeping the one with highest priority analyzer.
         """
         unique = {}
-        priority = {"regex": 1, "ast": 2, "entropy": 3, "java_ast": 2}  # 1 = highest
+        priority = {"regex": 1, "ast": 2, "entropy": 3, "java_ast": 2}
         for s in secrets:
             key = (s.filename, s.line_number)
             if key in unique:
@@ -1040,7 +1051,31 @@ class Scanner:
 
     def scan(self) -> None:
         """Run the scan process."""
-        print(f"{Fore.CYAN}Scanning directory: {self.config.project_dir}{Style.RESET_ALL}")
+        if self.config.repo_url:
+            print(f"{Fore.CYAN}Cloning repository: {self.config.repo_url}{Style.RESET_ALL}")
+            temp_dir = tempfile.mkdtemp()
+            try:
+                subprocess.run(['git', 'clone', '--depth', '1', self.config.repo_url, temp_dir],
+                               check=True, capture_output=True, text=True)
+                scan_dir = temp_dir
+                print(f"{Fore.GREEN}Repository cloned successfully{Style.RESET_ALL}")
+            except subprocess.CalledProcessError as e:
+                print(f"{Fore.RED}Failed to clone repository: {e.stderr}{Style.RESET_ALL}")
+                shutil.rmtree(temp_dir, ignore_errors=True)
+                return
+            except Exception as e:
+                print(f"{Fore.RED}Unexpected error during clone: {e}{Style.RESET_ALL}")
+                shutil.rmtree(temp_dir, ignore_errors=True)
+                return
+        elif self.config.project_dir:
+            scan_dir = self.config.project_dir
+        else:
+            print(f"{Fore.RED}Either project directory or --repo must be provided{Style.RESET_ALL}")
+            return
+
+        self.file_scanner = FileScanner(scan_dir, self.ignore_rules)
+
+        print(f"{Fore.CYAN}Scanning directory: {scan_dir}{Style.RESET_ALL}")
         files = self.file_scanner.get_files()
         print(f"Found {len(files)} files to scan.")
 
@@ -1072,7 +1107,6 @@ class Scanner:
         self.all_secrets = all_secrets
 
         if self.all_secrets:
-            # Apply criticality enhancement based on directory
             self.all_secrets = self.enhancer.enhance(self.all_secrets)
             self.all_secrets = self.deduplicate_secrets(self.all_secrets)
             self.output.print_results(self.all_secrets)
@@ -1082,6 +1116,10 @@ class Scanner:
                                              self.config.result_filename.replace('.json', '.html'))
         else:
             print(f"{Fore.GREEN}No secrets found.{Style.RESET_ALL}")
+
+        if self.config.repo_url:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            print(f"{Fore.CYAN}Temporary directory removed{Style.RESET_ALL}")
 
 
 class RegexCheckerAdapter:
