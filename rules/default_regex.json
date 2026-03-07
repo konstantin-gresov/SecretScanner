@@ -1,0 +1,289 @@
+{
+  "patterns": {
+    "AWS Access Key ID": {
+      "regex": "AKIA[0-9A-Z]{16}",
+      "risk group": "CRITICAL",
+      "recommendation": "Immediately revoke this key and generate a new one. Never hardcode AWS keys in source code; use IAM roles for EC2, AWS Secrets Manager, or environment variables instead."
+    },
+    "AWS Secret Access Key": {
+      "regex": "(?i)aws[_-]?secret[_-]?access[_-]?key\\s*[:=]\\s*['\"]?([A-Za-z0-9/+=]{40})['\"]?",
+      "risk group": "CRITICAL",
+      "recommendation": "Revoke this secret key and rotate it. Store it in a secure secrets manager (e.g., AWS Secrets Manager, HashiCorp Vault) and inject it via environment variables."
+    },
+    "Google Cloud Service Account": {
+      "regex": "\"type\":\\s*\"service_account\"",
+      "risk group": "CRITICAL",
+      "recommendation": "Rotate this service account key. Use workload identity federation or environment variables to avoid embedding keys in code."
+    },
+    "Google OAuth Access Token": {
+      "regex": "ya29\\.[0-9A-Za-z\\-_]+",
+      "risk group": "CRITICAL",
+      "recommendation": "OAuth tokens are short-lived but must never be committed. Use a secure token storage mechanism and refresh tokens via OAuth flows."
+    },
+    "Private Key": {
+      "regex": "-----BEGIN (RSA|DSA|EC|OPENSSH|PGP) PRIVATE KEY (BLOCK)?-----",
+      "risk group": "CRITICAL",
+      "recommendation": "Private keys must be kept secret. Revoke and replace if exposed. Store encrypted with strict file permissions and use SSH agent or HSM where possible."
+    },
+    "Slack Legacy Token (xoxp)": {
+      "regex": "xox[pborsa]-[0-9]{12}-[0-9]{12}-[0-9]{12}-[a-z0-9]{32}",
+      "risk group": "CRITICAL",
+      "recommendation": "Revoke this legacy token immediately and replace it with granular OAuth tokens. Store tokens in environment variables or a secrets manager."
+    },
+    "Stripe Live API Key": {
+      "regex": "sk_live_[0-9a-zA-Z]{24}",
+      "risk group": "CRITICAL",
+      "recommendation": "Live API keys can process real payments. Rotate this key now and use Stripe's restricted keys or a secrets manager for future storage."
+    },
+    "Stripe Restricted Live Key": {
+      "regex": "rk_live_[0-9a-zA-Z]{24}",
+      "risk group": "CRITICAL",
+      "recommendation": "This restricted key should still be kept secret. Rotate if exposed and store in environment variables or a vault."
+    },
+    "GitHub Personal Access Token": {
+      "regex": "gh[pousr]_[A-Za-z0-9_]{36,251}",
+      "risk group": "CRITICAL",
+      "recommendation": "Revoke this token and generate a new one. Use GitHub Actions secrets or a secrets manager to inject it, never hardcode."
+    },
+    "GitHub Fine-Grained Token": {
+      "regex": "github_pat_[a-zA-Z0-9]{22}_[a-zA-Z0-9]{59}",
+      "risk group": "CRITICAL",
+      "recommendation": "Fine-grained tokens have limited scopes but still require protection. Rotate if exposed and use environment variables."
+    },
+    "GitLab Personal Access Token": {
+      "regex": "glpat-[a-zA-Z0-9\\-]{20,40}",
+      "risk group": "CRITICAL",
+      "recommendation": "Revoke this GitLab token. Use CI/CD variables or a secrets manager."
+    },
+    "npm Access Token": {
+      "regex": "npm_[A-Za-z0-9]{36}",
+      "risk group": "CRITICAL",
+      "recommendation": "npm tokens allow package publishing. Revoke immediately and store new tokens in .npmrc only locally or in CI secrets."
+    },
+    "Twilio API Key": {
+      "regex": "SK[0-9a-fA-F]{32}",
+      "risk group": "CRITICAL",
+      "recommendation": "Rotate this API key and store it in environment variables. Use Twilio's helper libraries that automatically read from env."
+    },
+    "Twilio Auth Token": {
+      "regex": "(?i)twilio[\\s_]?auth[\\s_]?token\\s*[:=]\\s*['\"]?([a-f0-9]{32})['\"]?",
+      "risk group": "CRITICAL",
+      "recommendation": "Revoke this auth token and replace it. Use a secrets manager and environment variables to avoid exposure."
+    },
+    "Database Connection String (URL format)": {
+      "regex": "[a-zA-Z]{3,10}://[^/\\s:@]{3,20}:[^/\\s:@]{3,20}@[^\\s'\"]+",
+      "risk group": "CRITICAL",
+      "recommendation": "Connection strings with credentials are extremely sensitive. Move them to environment variables or a secrets manager and restrict access."
+    },
+    "Database Connection String (SQL Server)": {
+      "regex": "(?i)(?:server|data source)=[^;]+;(?:database|initial catalog)=[^;]+;.*user id=[^;]+;password=[^;]+",
+      "risk group": "CRITICAL",
+      "recommendation": "SQL Server connection strings contain credentials. Store them in environment variables or a secrets manager."
+    },
+    "Database Connection String (generic)": {
+      "regex": "(?i)(?:jdbc|odbc):[a-zA-Z0-9]+://[^\\s'\"]+",
+      "risk group": "CRITICAL",
+      "recommendation": "JDBC/ODBC connection strings often contain credentials. Externalize them."
+    },
+    "Any API Key in code": {
+      "regex": "(?i)(api[_-]?key|secret|token|password)[\"']?\\s*[:=]\\s*[\"']([A-Za-z0-9_\\-\\/+=]{16,})[\"']",
+      "risk group": "CRITICAL",
+      "recommendation": "Externalize this API key. Use environment variables or a secrets vault, and never commit it to version control."
+    },
+    "Slack Bot Token (xoxb)": {
+      "regex": "xoxb-[0-9]{11,13}-[0-9a-zA-Z]{24}",
+      "risk group": "HIGH",
+      "recommendation": "Revoke and replace this bot token. Store it in environment variables and consider using Slack's granular permissions."
+    },
+    "Slack Webhook": {
+      "regex": "https://hooks\\.slack\\.com/services/T[A-Z0-9]+/B[A-Z0-9]+/[A-Za-z0-9]+",
+      "risk group": "HIGH",
+      "recommendation": "Webhook URLs can be abused. Rotate if exposed and store in environment variables with restricted access."
+    },
+    "Mailgun API Key": {
+      "regex": "key-[0-9a-zA-Z]{32}",
+      "risk group": "HIGH",
+      "recommendation": "Revoke this Mailgun key and generate a new one. Use environment variables for storage."
+    },
+    "Mailchimp API Key": {
+      "regex": "[0-9a-f]{32}-us[0-9]{1,2}",
+      "risk group": "HIGH",
+      "recommendation": "Rotate this Mailchimp key immediately. Store it in a secrets manager and reference via environment variables."
+    },
+    "SendGrid API Key": {
+      "regex": "SG\\.[A-Za-z0-9_\\-]{22}\\.[A-Za-z0-9_\\-]{43}",
+      "risk group": "HIGH",
+      "recommendation": "Revoke this SendGrid key and replace it. Use environment variables to inject it at runtime."
+    },
+    "Intercom Access Token": {
+      "regex": "dG9rXj94fjoi[0-9A-Za-z=]+",
+      "risk group": "HIGH",
+      "recommendation": "Revoke this token and store new ones in environment variables. Limit token permissions where possible."
+    },
+    "HubSpot API Key": {
+      "regex": "(?i)(hubspot.*?api.?key\\s*[:=]\\s*['\"]?[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}['\"]?)",
+      "risk group": "HIGH",
+      "recommendation": "Rotate this HubSpot key. Store it in environment variables and avoid hardcoding."
+    },
+    "Discord Bot Token": {
+      "regex": "[Mm][Nn][Yz][Aa][0-9A-Za-z_-]{24}\\.[0-9A-Za-z_-]{6}\\.[0-9A-Za-z_-]{27}",
+      "risk group": "HIGH",
+      "recommendation": "Revoke this bot token and generate a new one. Use environment variables for storage and never commit it."
+    },
+    "Telegram Bot API Key": {
+      "regex": "[0-9]{8,10}:AA[0-9A-Za-z\\-_]{33}",
+      "risk group": "HIGH",
+      "recommendation": "Rotate this Telegram bot key. Store in environment variables and restrict access to the configuration."
+    },
+    "Heroku API Key": {
+      "regex": "(?i)heroku.*?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+      "risk group": "HIGH",
+      "recommendation": "Revoke this Heroku key. Use Heroku environment config vars instead of hardcoding."
+    },
+    "Square Access Token": {
+      "regex": "sq0atp-[0-9A-Za-z\\-_]{22}",
+      "risk group": "HIGH",
+      "recommendation": "Rotate this Square token. Store it in environment variables or a secrets manager."
+    },
+    "Square OAuth Secret": {
+      "regex": "sq0csp-[0-9A-Za-z\\-_]{43}",
+      "risk group": "HIGH",
+      "recommendation": "Revoke this OAuth secret. Use environment variables and never embed it in source code."
+    },
+    "Google Maps API Key": {
+      "regex": "AIza[0-9A-Za-z\\-_]{35}",
+      "risk group": "HIGH",
+      "recommendation": "Restrict this key by HTTP referrer or IP. Store in environment variables and avoid client-side exposure."
+    },
+    "Facebook Access Token": {
+      "regex": "EAAG[0-9A-Za-z]+",
+      "risk group": "HIGH",
+      "recommendation": "Revoke and refresh this token. Store in environment variables with limited permissions."
+    },
+    "PagerDuty API Key": {
+      "regex": "u\\+[a-f0-9]{8}_[a-f0-9]{22}",
+      "risk group": "HIGH",
+      "recommendation": "Rotate this PagerDuty key. Use environment variables or a secrets manager."
+    },
+    "OpenAI API Key": {
+      "regex": "sk-[a-zA-Z0-9]{20,50}",
+      "risk group": "HIGH",
+      "recommendation": "Revoke and rotate this OpenAI key. Store in environment variables and never commit."
+    },
+    "Azure Storage Account Key": {
+      "regex": "(?i)(?:storageaccount|accesskey)[\"']?\\s*[:=]\\s*[\"']([a-zA-Z0-9+/=]{88})[\"']",
+      "risk group": "CRITICAL",
+      "recommendation": "Revoke this Azure key immediately. Use Azure Managed Identity or Key Vault for access."
+    },
+    "Azure SAS Token": {
+      "regex": "sig=[a-zA-Z0-9%]{40,}",
+      "risk group": "HIGH",
+      "recommendation": "SAS tokens grant access to Azure resources. Rotate if exposed and use short-lived tokens where possible."
+    },
+    "Firebase API Key": {
+      "regex": "AIza[0-9A-Za-z\\-_]{35}",
+      "risk group": "MEDIUM",
+      "recommendation": "Firebase API keys are often public but should be restricted. Use Firebase App Check and environment variables."
+    },
+    "Firebase Service Account": {
+      "regex": "\"project_id\":\\s*\"[^\"]+\",\\s*\"private_key\":",
+      "risk group": "CRITICAL",
+      "recommendation": "Firebase service account keys grant extensive access. Rotate immediately and use workload identity federation."
+    },
+    "Shopify Access Token": {
+      "regex": "shpat_[a-f0-9]{32}",
+      "risk group": "HIGH",
+      "recommendation": "Revoke this Shopify token. Store in environment variables and use private apps with limited scopes."
+    },
+    "PayPal Access Token": {
+      "regex": "access_token\\$production\\$[0-9a-z]{16}\\$[0-9a-f]{32}",
+      "risk group": "CRITICAL",
+      "recommendation": "PayPal access tokens allow payment processing. Rotate immediately and use environment variables."
+    },
+    "JWT Token": {
+      "regex": "eyJ[A-Za-z0-9_-]*\\.[A-Za-z0-9_-]*\\.[A-Za-z0-9_-]*",
+      "risk group": "HIGH",
+      "recommendation": "JWT tokens often contain claims and can be used for authentication. Rotate if exposed and store securely."
+    },
+    "Base64 String (high entropy)": {
+      "regex": "[A-Za-z0-9+/]{40,}={0,2}",
+      "risk group": "MEDIUM",
+      "recommendation": "This looks like a base64-encoded secret. Investigate and avoid hardcoding."
+    },
+    "Base64 near keyword": {
+      "regex": "(?i)(key|secret|token|auth)[\"']?\\s*[:=]\\s*[\"']?([A-Za-z0-9+/]{20,}={0,2})[\"']?",
+      "risk group": "HIGH",
+      "recommendation": "This appears to be a base64-encoded secret near a sensitive keyword. Investigate and externalize."
+    },
+    "Hex String (>=32 chars)": {
+      "regex": "[a-fA-F0-9]{32,}",
+      "risk group": "MEDIUM",
+      "recommendation": "Long hex strings can be API keys or tokens. Review and externalize if they are secrets."
+    },
+    "UUID (potential secret)": {
+      "regex": "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+      "risk group": "MEDIUM",
+      "recommendation": "UUIDs are sometimes used as secret keys. Verify if this is a secret and avoid hardcoding."
+    },
+    "Generic Secret": {
+      "regex": "[sS][eE][cC][rR][eE][tT].*['\"][0-9a-zA-Z]{16,}['\"]",
+      "risk group": "MEDIUM",
+      "recommendation": "Avoid hardcoding secrets. Use environment variables or configuration files with strict file permissions."
+    },
+    "Generic API Key": {
+      "regex": "[aA][pP][iI]_?[kK][eE][yY].*['\"][0-9a-zA-Z]{16,}['\"]",
+      "risk group": "MEDIUM",
+      "recommendation": "Externalize this API key. Store in environment variables and consider rotating periodically."
+    },
+    "Password in URL": {
+      "regex": "[a-zA-Z]{3,10}://[^:\\s]+:[^@\\s]+@[^\\s'\"]+",
+      "risk group": "MEDIUM",
+      "recommendation": "Remove the password from the URL. Use authentication headers or store credentials in environment variables."
+    },
+    "AWS AppSync GraphQL Key": {
+      "regex": "da2-[a-z0-9]{26}",
+      "risk group": "MEDIUM",
+      "recommendation": "Rotate this key and store it in environment variables. Use IAM roles where possible."
+    },
+    "Stripe Test API Key": {
+      "regex": "sk_test_[0-9a-zA-Z]{24}",
+      "risk group": "MEDIUM",
+      "recommendation": "Test keys are less critical but still avoid hardcoding. Store in environment variables."
+    },
+    "Stripe Restricted Test Key": {
+      "regex": "rk_test_[0-9a-zA-Z]{24}",
+      "risk group": "MEDIUM",
+      "recommendation": "Store this test key in environment variables. Rotate if accidentally exposed."
+    },
+    "Google OAuth Client ID": {
+      "regex": "[0-9]+-[0-9A-Za-z_]{32}\\.apps\\.googleusercontent\\.com",
+      "risk group": "MEDIUM",
+      "recommendation": "Client IDs are public but should be verified. Still, use environment variables and restrict usage to authorized applications."
+    },
+    "Amazon MWS Auth Token": {
+      "regex": "amzn\\.mws\\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+      "risk group": "MEDIUM",
+      "recommendation": "Revoke and replace this token. Store in environment variables and use IAM roles if applicable."
+    },
+    "npmrc credentials": {
+      "regex": "_auth\\s*=\\s*[A-Za-z0-9\\/+=]+",
+      "risk group": "MEDIUM",
+      "recommendation": "Remove _auth from .npmrc in version control. Use npm login or environment variables for CI."
+    },
+    "Docker config.json (auth)": {
+      "regex": "\\\"auth\\\"\\s*:\\s*\\\"[A-Za-z0-9\\/+=]+\\\"",
+      "risk group": "MEDIUM",
+      "recommendation": "Keep Docker config.json out of version control. Restrict file permissions and use credential helpers."
+    },
+    "Cloudflare API Key": {
+      "regex": "(?i)(cloudflare.*?key\\s*[:=]\\s*['\"]?[a-f0-9]{37}['\"]?)",
+      "risk group": "MEDIUM",
+      "recommendation": "Rotate this Cloudflare key. Store in environment variables and limit its permissions."
+    },
+    "IP Address (Potentially internal)": {
+      "regex": "\\b(127\\.0\\.0\\.1|192\\.168\\..*|10\\..*|172\\.(1[6-9]|2[0-9]|3[0-1])\\..*)\\b",
+      "risk group": "MEDIUM",
+      "recommendation": "Internal IP addresses can expose network topology. Avoid hardcoding; use configuration management or service discovery."
+    }
+  }
+}

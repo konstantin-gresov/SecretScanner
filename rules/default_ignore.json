@@ -1,0 +1,31 @@
+{
+    "ignore": {
+        "files": [
+            "default_regex.json",
+            "default_ignore.json",
+	    "requirements.txt"
+        ],
+        "extensions": [
+            ".png",
+            ".svg",
+            ".jpg",
+            ".jpeg",
+            ".gif",
+            ".bmp",
+            ".ico",
+            ".exe",
+            ".dll",
+            ".so",
+            ".bin",
+	    ".css",
+	    ".html"
+        ],
+        "dirs": [
+            ".git",
+            "__pycache__",
+            "venv",
+            "env",
+            "node_modules"
+        ]
+    }
+}
