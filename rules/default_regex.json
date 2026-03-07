@@ -205,11 +205,6 @@
       "risk group": "HIGH",
       "recommendation": "JWT tokens often contain claims and can be used for authentication. Rotate if exposed and store securely."
     },
-    "Base64 String (high entropy)": {
-      "regex": "[A-Za-z0-9+/]{40,}={0,2}",
-      "risk group": "MEDIUM",
-      "recommendation": "This looks like a base64-encoded secret. Investigate and avoid hardcoding."
-    },
     "Base64 near keyword": {
       "regex": "(?i)(key|secret|token|auth)[\"']?\\s*[:=]\\s*[\"']?([A-Za-z0-9+/]{20,}={0,2})[\"']?",
       "risk group": "HIGH",
@@ -224,11 +219,6 @@
       "regex": "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
       "risk group": "MEDIUM",
       "recommendation": "UUIDs are sometimes used as secret keys. Verify if this is a secret and avoid hardcoding."
-    },
-    "Generic Secret": {
-      "regex": "[sS][eE][cC][rR][eE][tT].*['\"][0-9a-zA-Z]{16,}['\"]",
-      "risk group": "MEDIUM",
-      "recommendation": "Avoid hardcoding secrets. Use environment variables or configuration files with strict file permissions."
     },
     "Generic API Key": {
       "regex": "[aA][pP][iI]_?[kK][eE][yY].*['\"][0-9a-zA-Z]{16,}['\"]",
