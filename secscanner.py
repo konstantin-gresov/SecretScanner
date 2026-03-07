@@ -291,7 +291,7 @@ class EntropyAnalyzer:
                 continue
             ent = self.shannon_entropy(line)
             if ent > self.threshold:
-                criticality = "medium" if ent < 5.5 else "high"
+                criticality = "warning"
                 secret = Secret(
                     secret_type="entropy_secret",
                     filename=filepath,
@@ -849,11 +849,17 @@ $rows
         rows_html = []
         for s in secrets:
             criticality_class = s.criticality.lower()
-            badge_class = f"badge-{criticality_class}"
+            if criticality_class == "warning":
+                row_class = ""
+                badge_html = f'<span class="badge">{s.criticality}</span>'
+            else:
+                row_class = f'class="{criticality_class}"'
+                badge_html = f'<span class="badge badge-{criticality_class}">{s.criticality}</span>'
+
             secret_display = f"<code>{s.matched_part[:60]}{'...' if len(s.matched_part) > 60 else ''}</code>"
-            row = f"""            <tr class="{criticality_class}">
+            row = f"""            <tr {row_class}>
                 <td>{s.secret_type}</td>
-                <td><span class="badge {badge_class}">{s.criticality}</span></td>
+                <td>{badge_html}</td>
                 <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis;">{s.filename}</td>
                 <td>{s.line_number}</td>
                 <td style="font-family: monospace;">{secret_display}</td>
@@ -959,6 +965,8 @@ class OutputFormatter:
                 color = Fore.RED
             elif criticality == 'medium':
                 color = Fore.YELLOW
+            elif criticality == 'warning':
+                color = Fore.WHITE
             else:
                 color = Fore.WHITE
 
@@ -1112,6 +1120,4 @@ if __name__ == "__main__":
         scanner.scan()
     except Exception as e:
         print(f"{Fore.RED}Fatal error: {e}{Style.RESET_ALL}")
-        import traceback
-        traceback.print_exc()  # <-- добавить эту строку
         exit(1)
