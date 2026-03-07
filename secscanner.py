@@ -159,7 +159,12 @@ class Config:
         try:
             with open(self.config["json_settings"]["ast_keywords"], encoding="utf-8") as f:
                 data = json.load(f)
-                return data.get("keywords", [])
+                if isinstance(data, dict):
+                    return data.get("keywords", [])
+                elif isinstance(data, list):
+                    return data
+                else:
+                    return []
         except FileNotFoundError:
             return ["password", "passwd", "pwd", "secret", "token", "api_key", "apikey",
                     "auth", "authorization", "credential", "private_key", "access_key"]
@@ -647,91 +652,126 @@ class CriticalityEnhancer:
 
 
 class HTMLReportGenerator:
-    """Generates an HTML report from a list of secrets."""
-
     @staticmethod
     def generate(secrets: List[Secret], output_file: str) -> None:
-        """Generate and save HTML report."""
         html_template = """<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Secret Scanner Report</title>
     <style>
-        body {{ font-family: Arial, sans-serif; margin: 20px; }}
-        h1 {{ color: #333; }}
-        table {{ border-collapse: collapse; width: 100%; margin-top: 20px; }}
-        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
-        th {{ background-color: #f2f2f2; cursor: pointer; }}
-        tr:nth-child(even) {{ background-color: #f9f9f9; }}
-        tr:hover {{ background-color: #f5f5f5; }}
-        .critical {{ background-color: #ffdddd; }}
-        .high {{ background-color: #ffdddd; }}
-        .medium {{ background-color: #ffffcc; }}
-        .low {{ background-color: #e6f3ff; }}
-        .filter-input {{ margin-bottom: 10px; padding: 5px; width: 300px; }}
+        * {box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 20px; 
+            background: #f5f7fa;
+            color: #333;
+        }
+        h1 { 
+            color: #2c3e50; 
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #3498db;
+        }
+        .summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .summary strong { font-size: 1.5em; }
+        table { 
+            border-collapse: collapse; 
+            width: 100%; 
+            margin-top: 20px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        th, td { 
+            border: 1px solid #e1e5eb; 
+            padding: 12px 15px; 
+            text-align: left; 
+        }
+        th { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85em;
+            letter-spacing: 0.5px;
+        }
+        th:hover { background: linear-gradient(135deg, #5a6fd6 0%, #6a4190 100%); }
+        tr:nth-child(even) { background-color: #f8f9fc; }
+        tr:hover { background-color: #e8ecf3; }
+        .critical { background-color: #ffebee !important; border-left: 4px solid #e74c3c; }
+        .high { background-color: #fff3e0 !important; border-left: 4px solid #f39c12; }
+        .medium { background-color: #fff9c4 !important; border-left: 4px solid #f1c40f; }
+        .low { background-color: #e3f2fd !important; border-left: 4px solid #3498db; }
+        .filter-container {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .filter-input { 
+            padding: 10px 15px; 
+            width: 300px; 
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            font-size: 14px;
+            outline: none;
+        }
+        .filter-input:focus { border-color: #667eea; }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .badge-critical { background: #e74c3c; color: white; }
+        .badge-high { background: #f39c12; color: white; }
+        .badge-medium { background: #f1c40f; color: #333; }
+        .badge-low { background: #3498db; color: white; }
+        code {
+            background: #2c3e50;
+            color: #2ecc71;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+            word-break: break-all;
+        }
+        .analyzer-tag {
+            background: #ecf0f1;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            color: #7f8c8d;
+        }
+        footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
     </style>
-    <script>
-        function filterTable() {{
-            var input = document.getElementById("filter");
-            var filter = input.value.toUpperCase();
-            var table = document.getElementById("secrets-table");
-            var rows = table.getElementsByTagName("tr");
-            for (var i = 1; i < rows.length; i++) {{
-                var cells = rows[i].getElementsByTagName("td");
-                var found = false;
-                for (var j = 0; j < cells.length; j++) {{
-                    var cell = cells[j];
-                    if (cell) {{
-                        if (cell.innerText.toUpperCase().indexOf(filter) > -1) {{
-                            found = true;
-                            break;
-                        }}
-                    }}
-                }}
-                rows[i].style.display = found ? "" : "none";
-            }}
-        }}
-        
-        function sortTable(n) {{
-            var table = document.getElementById("secrets-table");
-            var rows = table.rows, switching = true, i, x, y, shouldSwitch, dir = "asc", switchcount = 0;
-            while (switching) {{
-                switching = false;
-                for (i = 1; i < (rows.length - 1); i++) {{
-                    shouldSwitch = false;
-                    x = rows[i].getElementsByTagName("TD")[n];
-                    y = rows[i + 1].getElementsByTagName("TD")[n];
-                    if (dir == "asc") {{
-                        if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {{
-                            shouldSwitch = true;
-                            break;
-                        }}
-                    }} else {{
-                        if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {{
-                            shouldSwitch = true;
-                            break;
-                        }}
-                    }}
-                }}
-                if (shouldSwitch) {{
-                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-                    switching = true;
-                    switchcount++;
-                }} else {{
-                    if (switchcount == 0 && dir == "asc") {{
-                        dir = "desc";
-                        switching = true;
-                    }}
-                }}
-            }}
-        }}
-    </script>
 </head>
 <body>
-    <h1>Secret Scanner Report</h1>
-    <p>Found <strong>{count}</strong> potential secrets.</p>
-    <input type="text" id="filter" class="filter-input" placeholder="Filter table..." onkeyup="filterTable()">
+    <h1>🔐 Secret Scanner Report</h1>
+    <div class="summary">
+        <p>Found <strong>$count</strong> potential secrets</p>
+    </div>
+    <div class="filter-container">
+        <input type="text" id="filter" class="filter-input" placeholder="🔍 Filter results..." onkeyup="filterTable()">
+    </div>
     <table id="secrets-table">
         <thead>
             <tr>
@@ -745,27 +785,91 @@ class HTMLReportGenerator:
             </tr>
         </thead>
         <tbody>
-{rows}
+$rows
         </tbody>
     </table>
+    <footer>
+        <p>Generated by SecScanner | $timestamp</p>
+    </footer>
+    <script>
+        function filterTable() {
+            var input = document.getElementById("filter");
+            var filter = input.value.toUpperCase();
+            var table = document.getElementById("secrets-table");
+            var rows = table.getElementsByTagName("tr");
+            for (var i = 1; i < rows.length; i++) {
+                var cells = rows[i].getElementsByTagName("td");
+                var found = false;
+                for (var j = 0; j < cells.length; j++) {
+                    if (cells[j] && cells[j].innerText.toUpperCase().indexOf(filter) > -1) {
+                        found = true;
+                        break;
+                    }
+                }
+                rows[i].style.display = found ? "" : "none";
+            }
+        }
+        function sortTable(n) {
+            var table = document.getElementById("secrets-table");
+            var rows = table.rows, switching = true, i, x, y, shouldSwitch, dir = "asc", switchcount = 0;
+            while (switching) {
+                switching = false;
+                for (i = 1; i < (rows.length - 1); i++) {
+                    shouldSwitch = false;
+                    x = rows[i].getElementsByTagName("TD")[n];
+                    y = rows[i + 1].getElementsByTagName("TD")[n];
+                    if (dir == "asc") {
+                        if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    } else {
+                        if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    }
+                }
+                if (shouldSwitch) {
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                    switchcount++;
+                } else {
+                    if (switchcount == 0 && dir == "asc") {
+                        dir = "desc";
+                        switching = true;
+                    }
+                }
+            }
+        }
+    </script>
 </body>
 </html>"""
+        
         rows_html = []
         for s in secrets:
             criticality_class = s.criticality.lower()
-            secret_display = s.matched_part if len(s.matched_part) <= 80 else s.matched_part[:80] + "..."
+            badge_class = f"badge-{criticality_class}"
+            secret_display = f"<code>{s.matched_part[:60]}{'...' if len(s.matched_part) > 60 else ''}</code>"
             row = f"""            <tr class="{criticality_class}">
                 <td>{s.secret_type}</td>
-                <td>{s.criticality}</td>
-                <td>{s.filename}</td>
+                <td><span class="badge {badge_class}">{s.criticality}</span></td>
+                <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis;">{s.filename}</td>
                 <td>{s.line_number}</td>
-                <td>{secret_display}</td>
-                <td>{s.analyzer}</td>
+                <td style="font-family: monospace;">{secret_display}</td>
+                <td><span class="analyzer-tag">{s.analyzer}</span></td>
                 <td>{s.recommendation}</td>
             </tr>"""
             rows_html.append(row)
-
-        full_html = html_template.format(count=len(secrets), rows="\n".join(rows_html))
+        
+        from datetime import datetime
+        from string import Template  # уже импортирован в начале файла, но для ясности
+        template = Template(html_template)
+        full_html = template.substitute(
+            count=len(secrets),
+            rows="\n".join(rows_html),
+            timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        )
         try:
             with open(output_file, "w", encoding="utf-8") as f:
                 f.write(full_html)
@@ -1008,4 +1112,6 @@ if __name__ == "__main__":
         scanner.scan()
     except Exception as e:
         print(f"{Fore.RED}Fatal error: {e}{Style.RESET_ALL}")
+        import traceback
+        traceback.print_exc()  # <-- добавить эту строку
         exit(1)
